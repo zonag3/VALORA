@@ -1,86 +1,90 @@
-# DESPLIEGUE REAL — SUPABASE + CLOUDFLARE PAGES
+VALORA A TU PROFESOR — V7 CLOUDFLARE ONLY
 
-Esta versión NO usa localStorage para votos, códigos ni panel.
-Todo dato real vive en Supabase.
+Arquitectura real:
 
-## 1. Crear Supabase
-1. Entra en Supabase y crea un proyecto gratuito.
-2. Ve a `SQL Editor`.
-3. Abre `supabase-schema.sql`, copia todo y ejecútalo.
-4. En `Project Settings > API` copia:
-   - Project URL
-   - `service_role` key
+Navegador
+   ↓
+Cloudflare Pages
+   ↓
+Pages Functions
+   ↓
+Cloudflare D1 (binding DB)
 
-IMPORTANTE:
-La `service_role` key NO está incluida en el HTML ni en app.js.
-Solo se configura como secreto del servidor Cloudflare.
+NO usa Supabase.
+NO usa localStorage como base de datos.
+NO necesita tarjeta de crédito dentro de los límites del plan Free.
 
-## 2. Publicar en Cloudflare Pages
-Sube esta carpeta a un repositorio GitHub y crea un proyecto Cloudflare Pages
-con ese repositorio.
+PASO 1 — YA HECHO
+En Cloudflare Pages:
+Binding:
+  Nombre: DB
+  D1 database: valora-db
 
-No necesita build:
-- Framework preset: None
-- Build command: vacío
-- Build output directory: `/` (raíz del proyecto)
+PASO 2 — CREAR TABLAS
+Cloudflare:
+Storage & databases
+→ D1 SQL Database
+→ valora-db
+→ Console
 
-Cloudflare detectará automáticamente la carpeta `functions/`.
+Copia TODO el contenido de:
+  d1-schema.sql
 
-## 3. Variables de entorno en Cloudflare
-En:
-`Workers & Pages > tu proyecto > Settings > Variables and Secrets`
+Pégalo en Console y pulsa Execute.
 
-Añade:
+Esto crea:
+- codes
+- votes
+- code_attempts
 
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
+Y crea un código inicial:
+  666-333
+
+PASO 3 — VARIABLES DEL ADMINISTRADOR
+En tu proyecto Pages:
+Settings
+→ Variables and secrets
+
+Crea estas 3 variables:
+
 ADMIN_USER
-ADMIN_PASSWORD
-SESSION_SECRET
-
 Ejemplo:
-ADMIN_USER = admin
+admin
 
-Para `ADMIN_PASSWORD`, elige tú una contraseña fuerte.
-Para `SESSION_SECRET`, usa una cadena aleatoria larga (32+ caracteres).
+ADMIN_PASSWORD
+Pon una contraseña tuya fuerte.
 
-Después vuelve a desplegar.
+SESSION_SECRET
+Pon una cadena larga aleatoria de al menos 32 caracteres.
+Ejemplo de formato:
+Kj8!vQ2#fZ91_xP4mL7rT0sW6nC3aB5D
 
-## 4. Prueba
-La base de datos crea un código inicial:
-`666-333`
+No hace falta compartir estas claves con nadie.
 
-Entra en la URL gratuita que Cloudflare te da, por ejemplo:
-`https://tu-proyecto.pages.dev`
+PASO 4 — SUBIR V7 A GITHUB
+Sustituye en el repositorio los archivos de la V6 por los de esta V7.
+Asegúrate especialmente de subir:
 
-Vota desde un móvil.
+index.html
+styles.css
+app.js
+assets/
+functions/
+d1-schema.sql
 
-Abre Administración desde otro dispositivo:
-- usuario = el valor de ADMIN_USER
-- contraseña = el valor de ADMIN_PASSWORD
+El commit provocará automáticamente un nuevo deploy de Cloudflare.
 
-El voto aparecerá en el panel porque ya está guardado en Supabase.
+PASO 5 — PRUEBA REAL
+Abre tu URL pages.dev.
 
-## 5. Arquitectura
+Código:
+666-333
 
-NAVEGADOR
-   |
-   v
-Cloudflare Pages (HTML/CSS/JS)
-   |
-   v
-Cloudflare Pages Functions (/api/*)
-   |
-   v
-Supabase PostgreSQL
+Haz un voto.
 
-La SERVICE_ROLE_KEY nunca sale al navegador.
+Después entra en Administración con:
+- usuario = ADMIN_USER
+- contraseña = ADMIN_PASSWORD
 
-## Seguridad incluida
-- Código de un solo uso.
-- Envío de voto atómico en PostgreSQL.
-- 5 códigos incorrectos => bloqueo de IP durante 10 minutos.
-- Base de datos no accesible directamente desde el navegador.
-- RLS activado.
-- Login admin mediante cookie HttpOnly firmada.
-- SERVICE_ROLE_KEY guardada solo como secreto de Cloudflare.
+El voto debe aparecer en el dashboard y permanecer aunque cambies de
+ordenador o móvil porque está almacenado en D1.
