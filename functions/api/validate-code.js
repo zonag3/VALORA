@@ -1,73 +1,73 @@
-import { json, requireEnv, sbFetch, clientIp, normalizeCode } from "../_lib.js";
+import { json, requireDb, clientIp, normalizeCode } from "../_lib.js";
 
 export async function onRequestPost({ request, env }) {
   try {
-    requireEnv(env);
+    requireDb(env);
+
     const body = await request.json().catch(() => ({}));
     const code = normalizeCode(body.code);
-    if (!code) return json({ ok:false, error:"invalid_format" }, 400);
 
-    const ip = clientIp(request);
-    const attemptRes = await sbFetch(
-      env,
-      `code_attempts?ip=eq.${encodeURIComponent(ip)}&select=fails,locked_until&limit=1`
-    );
-    const attempts = attemptRes.ok ? await attemptRes.json() : [];
-    const attempt = attempts[0];
-
-    if (attempt?.locked_until) {
-      const until = new Date(attempt.locked_until).getTime();
-      if (until > Date.now()) {
-        return json({
-          ok:false,
-          error:"locked",
-          retryAfterSeconds: Math.ceil((until - Date.now())/1000)
-        }, 429);
-      }
+    if (!code) {
+      return json({ ok:false, error:"invalid_format" }, 400);
     }
 
-    const codeRes = await sbFetch(
-      env,
-      `codes?code=eq.${encodeURIComponent(code)}&select=id,used&limit=1`
-    );
-    if (!codeRes.ok) return json({ ok:false, error:"database" }, 500);
+    const ip = clientIp(request);
+    const now = Math.floor(Date.now() / 1000);
 
-    const rows = await codeRes.json();
-    const found = rows[0];
+    const attempt = await env.DB
+      .prepare("SELECT fails, locked_until FROM code_attempts WHERE ip = ?")
+      .bind(ip)
+      .first();
+
+    if (attempt?.locked_until && Number(attempt.locked_until) > now) {
+      return json({
+        ok:false,
+        error:"locked",
+        retryAfterSeconds:Number(attempt.locked_until) - now
+      }, 429);
+    }
+
+    const found = await env.DB
+      .prepare("SELECT id, used FROM codes WHERE code = ? LIMIT 1")
+      .bind(code)
+      .first();
 
     if (!found) {
       const currentFails = Number(attempt?.fails || 0) + 1;
-      const shouldLock = currentFails >= 5;
-      const lockedUntil = shouldLock ? new Date(Date.now() + 10*60*1000).toISOString() : null;
+      const lockNow = currentFails >= 5;
+      const lockedUntil = lockNow ? now + 600 : null;
+      const storedFails = lockNow ? 0 : currentFails;
 
-      await sbFetch(env, "code_attempts?on_conflict=ip", {
-        method: "POST",
-        headers: { "Prefer":"resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({
-          ip,
-          fails: shouldLock ? 0 : currentFails,
-          locked_until: lockedUntil,
-          updated_at: new Date().toISOString()
-        })
-      });
+      await env.DB.prepare(`
+        INSERT INTO code_attempts(ip, fails, locked_until, updated_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(ip) DO UPDATE SET
+          fails = excluded.fails,
+          locked_until = excluded.locked_until,
+          updated_at = excluded.updated_at
+      `).bind(ip, storedFails, lockedUntil, now).run();
 
       return json({
         ok:false,
-        error: shouldLock ? "locked" : "invalid_code",
-        attemptsLeft: shouldLock ? 0 : 5-currentFails,
-        retryAfterSeconds: shouldLock ? 600 : undefined
-      }, shouldLock ? 429 : 404);
+        error:lockNow ? "locked" : "invalid_code",
+        attemptsLeft:lockNow ? 0 : 5-currentFails,
+        retryAfterSeconds:lockNow ? 600 : undefined
+      }, lockNow ? 429 : 404);
     }
 
-    if (found.used) return json({ ok:false, error:"used" }, 409);
+    if (Number(found.used) === 1) {
+      return json({ ok:false, error:"used" }, 409);
+    }
 
-    // Código correcto: reiniciamos intentos.
-    await sbFetch(env, `code_attempts?ip=eq.${encodeURIComponent(ip)}`, {
-      method: "DELETE"
-    });
+    await env.DB
+      .prepare("DELETE FROM code_attempts WHERE ip = ?")
+      .bind(ip)
+      .run();
 
     return json({ ok:true, code });
+
   } catch (err) {
-    return json({ ok:false, error:"server", detail:String(err.message || err) }, 500);
+    console.error(err);
+    return json({ ok:false, error:"server" }, 500);
   }
 }

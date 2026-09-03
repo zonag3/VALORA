@@ -1,40 +1,71 @@
-import { json, requireEnv, sbFetch, normalizeCode } from "../_lib.js";
+import { json, requireDb, normalizeCode } from "../_lib.js";
 
 export async function onRequestPost({ request, env }) {
   try {
-    requireEnv(env);
+    requireDb(env);
+
     const body = await request.json().catch(() => ({}));
     const code = normalizeCode(body.code);
-    const answers = Array.isArray(body.answers) ? body.answers.map(Number) : [];
+    const answers = Array.isArray(body.answers)
+      ? body.answers.map(Number)
+      : [];
 
-    if (!code || answers.length !== 5 || answers.some(v => !Number.isInteger(v) || v < 1 || v > 5)) {
+    if (
+      !code
+      || answers.length !== 5
+      || answers.some(v => !Number.isInteger(v) || v < 1 || v > 5)
+    ) {
       return json({ ok:false, error:"invalid_data" }, 400);
     }
 
-    const comment = String(body.comment || "").slice(0,500);
+    const comment = String(body.comment || "").trim().slice(0,500);
+    const average = answers.reduce((a,b) => a+b, 0) / answers.length;
 
-    const res = await sbFetch(env, "rpc/submit_vote", {
-      method: "POST",
-      body: JSON.stringify({
-        p_code: code,
-        p_q1: answers[0],
-        p_q2: answers[1],
-        p_q3: answers[2],
-        p_q4: answers[3],
-        p_q5: answers[4],
-        p_comment: comment || null
-      })
-    });
+    // INSERT OR IGNORE + UNIQUE(code_id) impide doble voto incluso
+    // si llegan dos peticiones prácticamente al mismo tiempo.
+    const insert = env.DB.prepare(`
+      INSERT OR IGNORE INTO votes (
+        code_id, q1, q2, q3, q4, q5, comment, average
+      )
+      SELECT id, ?, ?, ?, ?, ?, ?, ?
+      FROM codes
+      WHERE code = ? AND used = 0
+    `).bind(
+      answers[0], answers[1], answers[2], answers[3], answers[4],
+      comment || null,
+      average,
+      code
+    );
 
-    if (!res.ok) {
-      const txt = await res.text();
-      if (txt.includes("code_used")) return json({ok:false,error:"used"},409);
-      if (txt.includes("invalid_code")) return json({ok:false,error:"invalid_code"},404);
-      return json({ok:false,error:"database"},500);
+    // Marcamos el código como usado solo cuando exista un voto asociado.
+    const markUsed = env.DB.prepare(`
+      UPDATE codes
+      SET used = 1,
+          used_at = CURRENT_TIMESTAMP
+      WHERE code = ?
+        AND EXISTS (
+          SELECT 1 FROM votes WHERE votes.code_id = codes.id
+        )
+    `).bind(code);
+
+    const results = await env.DB.batch([insert, markUsed]);
+    const inserted = Number(results?.[0]?.meta?.changes || 0);
+
+    if (inserted === 1) {
+      return json({ ok:true });
     }
 
-    return json({ ok:true });
+    const found = await env.DB
+      .prepare("SELECT id, used FROM codes WHERE code = ? LIMIT 1")
+      .bind(code)
+      .first();
+
+    if (!found) return json({ ok:false, error:"invalid_code" }, 404);
+
+    return json({ ok:false, error:"used" }, 409);
+
   } catch (err) {
-    return json({ ok:false, error:"server", detail:String(err.message || err) }, 500);
+    console.error(err);
+    return json({ ok:false, error:"server" }, 500);
   }
 }
