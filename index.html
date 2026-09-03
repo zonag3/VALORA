@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valora a tu profesor</title>
+  <meta name="theme-color" content="#111d3a">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <button class="brand" data-go="access" aria-label="Ir al inicio">
+        <span class="brand-mark">★</span>
+        <span>Valora a tu profesor</span>
+      </button>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" id="helpBtn" title="Ayuda">?</button>
+        <button class="lang-btn" title="Idioma">ES <span>⌄</span></button>
+        <button class="admin-link" data-go="admin-login">Administración</button>
+      </div>
+    </header>
+
+    <!-- ACCESS -->
+    <main class="view active" id="view-access">
+      <section class="hero-shell">
+        <div class="blob blob-a"></div>
+        <div class="blob blob-b"></div>
+
+        <div class="hero-grid">
+          <section class="access-card card">
+            <div class="main-icon">☆</div>
+            <p class="eyebrow">ENCUESTA DOCENTE</p>
+            <h1>Valora a tu profesor</h1>
+            <p class="lead">Introduce el código que te han facilitado para comenzar la encuesta.</p>
+
+            <form id="codeForm" class="code-form" autocomplete="off">
+              <div class="code-inputs" aria-label="Código de acceso">
+                <input id="codeA" inputmode="numeric" maxlength="3" placeholder="000" aria-label="Primeros tres dígitos">
+                <span class="code-separator">–</span>
+                <input id="codeB" inputmode="numeric" maxlength="3" placeholder="000" aria-label="Últimos tres dígitos">
+              </div>
+
+              <button class="primary-btn" type="submit">Entrar</button>
+              <p class="status-msg" id="codeStatus"></p>
+            </form>
+
+            <div class="single-use">▣ &nbsp; Cada código solo puede utilizarse una vez.</div>
+          </section>
+
+          <aside class="teacher-visual" aria-hidden="true">
+            <div class="teacher-glow"></div>
+            <img
+              class="teacher-asset"
+              src="assets/profesor.png"
+              alt=""
+              loading="eager"
+              decoding="async"
+            >
+          </aside>
+        </div>
+
+        <section class="benefits">
+          <article>
+            <div class="benefit-icon">◆</div>
+            <div><strong>Anónimo</strong><p>Tus respuestas son confidenciales.</p></div>
+          </article>
+          <article>
+            <div class="benefit-icon">◷</div>
+            <div><strong>Rápido</strong><p>La encuesta te llevará menos de 2 minutos.</p></div>
+          </article>
+          <article>
+            <div class="benefit-icon">✓</div>
+            <div><strong>Importa tu opinión</strong><p>Tus respuestas ayudan a mejorar la enseñanza.</p></div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <!-- SURVEY -->
+    <main class="view" id="view-survey">
+      <section class="survey-wrap">
+        <div class="survey-card card">
+          <div class="survey-heading">
+            <div>
+              <p class="eyebrow">TU OPINIÓN CUENTA</p>
+              <h2>Valora la experiencia docente</h2>
+              <p>Selecciona una puntuación del 1 al 5 para cada afirmación.</p>
+            </div>
+            <span class="code-badge" id="activeCode">000-000</span>
+          </div>
+
+          <form id="surveyForm">
+            <div id="questions"></div>
+
+            <label class="comment-label" for="comment">
+              Comentario opcional
+              <textarea id="comment" maxlength="500" placeholder="¿Quieres añadir algo que ayude a mejorar?"></textarea>
+              <small><span id="commentCount">0</span>/500</small>
+            </label>
+
+            <div class="survey-actions">
+              <button type="button" class="secondary-btn" data-go="access">Cancelar</button>
+              <button type="submit" class="primary-btn">Enviar valoración</button>
+            </div>
+            <p class="status-msg" id="surveyStatus"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- THANK YOU -->
+    <main class="view" id="view-thanks">
+      <section class="center-page">
+        <div class="thanks-card card">
+          <div class="success-icon">✓</div>
+          <p class="eyebrow">RESPUESTA REGISTRADA</p>
+          <h2>Gracias por participar</h2>
+          <p>Tu valoración ha sido guardada correctamente y este código ya no puede volver a utilizarse.</p>
+          <button class="primary-btn" data-go="access">Volver al inicio</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ADMIN LOGIN -->
+    <main class="view" id="view-admin-login">
+      <section class="admin-login-page">
+        <div class="login-panel card">
+          <div class="main-icon">⌁</div>
+          <p class="eyebrow">ZONA PRIVADA</p>
+          <h2>Panel de administración</h2>
+          <p class="lead">Accede para consultar participación, resultados y códigos.</p>
+
+          <form id="adminLoginForm" autocomplete="off">
+            <label>
+              Usuario
+              <input id="adminUser" type="text" placeholder="Administrador">
+            </label>
+            <label>
+              Contraseña
+              <div class="password-wrap">
+                <input id="adminPass" type="password" placeholder="••••••••">
+                <button type="button" id="togglePass" aria-label="Mostrar contraseña">◉</button>
+              </div>
+            </label>
+            <button class="primary-btn" type="submit">Entrar al panel</button>
+            <p class="status-msg" id="adminStatus"></p>
+          </form>
+
+          <button class="text-btn" data-go="access">← Volver a la encuesta</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ADMIN DASHBOARD -->
+    <main class="view" id="view-admin">
+      <section class="dashboard">
+        <aside class="sidebar">
+          <div class="sidebar-brand">★ <span>Valora a tu profesor</span></div>
+          <nav>
+            <button class="nav-item active" data-section="summary">⌂ <span>Resumen</span></button>
+            <button class="nav-item" data-section="results">▣ <span>Resultados</span></button>
+            <button class="nav-item" data-section="votes">◫ <span>Votos individuales</span></button>
+            <button class="nav-item" data-section="codes">⌁ <span>Códigos</span></button>
+            <button class="nav-item" id="exportBtn">⇧ <span>Exportar CSV</span></button>
+            <button class="nav-item" data-section="settings">⚙ <span>Ajustes</span></button>
+          </nav>
+          <button class="logout-btn" id="logoutBtn">↪ <span>Cerrar sesión</span></button>
+        </aside>
+
+        <section class="dashboard-main">
+          <div class="dashboard-head">
+            <div>
+              <p class="eyebrow">ENCUESTA ACTIVA</p>
+              <h2 id="dashboardTitle">Resumen</h2>
+            </div>
+            <div class="date-pill" id="todayPill"></div>
+          </div>
+
+          <div id="section-summary" class="dash-section active">
+            <div class="kpi-grid">
+              <article class="kpi card"><span>♙</span><div><b id="totalCodes">142</b><small>Total códigos</small></div></article>
+              <article class="kpi card"><span>✓</span><div><b id="receivedVotes">98</b><small>Votos recibidos</small></div></article>
+              <article class="kpi card"><span>%</span><div><b id="participation">69%</b><small>Participación</small></div></article>
+              <article class="kpi card"><span>◷</span><div><b class="active-state">Activa</b><small>Estado de la encuesta</small></div></article>
+            </div>
+
+            <div class="summary-grid">
+              <article class="card chart-card">
+                <h3>Participación</h3>
+                <div class="donut" id="donut"><div><strong id="donutText">69%</strong><span>Participación</span></div></div>
+                <div class="legend">
+                  <p><i class="dot purple"></i> Votos recibidos <b id="legendVotes">98</b></p>
+                  <p><i class="dot pale"></i> Pendientes <b id="legendPending">44</b></p>
+                </div>
+              </article>
+
+              <article class="card rating-card">
+                <h3>Valoración general</h3>
+                <div class="big-rating" id="overallRating">4.6</div>
+                <div class="stars" id="overallStars">★★★★★</div>
+                <strong>de 5 estrellas</strong>
+                <p id="ratingBase">Basado en 98 respuestas</p>
+              </article>
+            </div>
+
+            <div class="results-grid">
+              <article class="card question-results">
+                <h3>Resultados por pregunta</h3>
+                <div id="questionResults"></div>
+              </article>
+
+              <article class="card distribution">
+                <h3>Distribución de valoraciones</h3>
+                <div id="distribution"></div>
+              </article>
+            </div>
+
+            <div class="bottom-grid">
+              <article class="card">
+                <h3>Actividad reciente</h3>
+                <div id="recentActivity" class="activity-list"></div>
+              </article>
+              <article class="card pending-card">
+                <h3>Códigos pendientes</h3>
+                <div class="pending-number" id="pendingCount">44</div>
+                <p>códigos aún no han votado</p>
+                <button class="secondary-btn" data-jump="codes">Ver códigos</button>
+              </article>
+            </div>
+          </div>
+
+          <div id="section-results" class="dash-section">
+            <article class="card section-card">
+              <h3>Resultados detallados</h3>
+              <p class="muted">Vista completa de las medias obtenidas en cada apartado.</p>
+              <div id="detailedResults"></div>
+            </article>
+          </div>
+
+          <div id="section-votes" class="dash-section">
+            <article class="card section-card">
+              <h3>Votos individuales</h3>
+              <p class="muted">En producción puedes decidir si el administrador puede relacionar código y respuesta o si el voto queda disociado.</p>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Código</th><th>Media</th><th>Comentario</th><th>Fecha</th></tr></thead>
+                  <tbody id="votesTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div id="section-codes" class="dash-section">
+            <article class="card section-card">
+              <div class="section-title-row">
+                <div>
+                  <h3>Gestión de códigos</h3>
+                  <p class="muted">Genera códigos de seis dígitos en formato XXX-XXX.</p>
+                </div>
+                <button class="primary-btn compact" id="generateCodesBtn">Generar 10 códigos</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Código</th><th>Estado</th><th>Usado</th></tr></thead>
+                  <tbody id="codesTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div id="section-settings" class="dash-section">
+            <article class="card section-card">
+              <h3>Ajustes de la encuesta</h3>
+              <div class="settings-grid">
+                <label>Nombre de la encuesta<input value="Valora a tu profesor"></label>
+                <label>Intentos fallidos permitidos<input type="number" value="5" min="1" max="20"></label>
+                <label>Bloqueo temporal (minutos)<input type="number" value="10" min="1" max="120"></label>
+                <label class="toggle-row">Encuesta activa <input type="checkbox" checked></label>
+              </div>
+              <button class="primary-btn compact">Guardar ajustes</button>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
