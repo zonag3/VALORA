@@ -1,14 +1,13 @@
-VALORA A TU PROFESOR — V7 D1
+VALORA V10
 
 Cloudflare Pages + Pages Functions + Cloudflare D1.
 
-Asset:
-assets/profesor.png
+Antes de desplegar sobre V8/V9:
+1. Ejecuta MIGRACION_V8_V9_A_V10.sql en valora-db.
+2. Sube esta V10 al repo GitHub.
 
-Base de datos:
-d1-schema.sql
+Código de control protegido: 333-666
+Binding: DB -> valora-db
+Asset actual: assets/profesor.png
 
-Binding esperado:
-DB → valora-db
-
-Lee README_DEPLOY.md.
+Lee README_V10.txt.
